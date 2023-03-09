@@ -1,0 +1,256 @@
+{
+  "name": "B2BR Management - Delete All ACCT Device",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "48124f1f-4a05-458b-ade8-d50eaee5037h",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        30,
+        340
+      ],
+      "webhookId": "48124f1f-4a05-458b-ade8-d50eaee5037f"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=select count(*) from ucproxy_accounts where account_id = '{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}'"
+      },
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        200,
+        340
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=/usr/sbin/ucproxy-delete_device.sh {{$node[\"MySQL1\"].json[\"account_id\"]}} {{$node[\"MySQL1\"].json[\"device_id\"]}} {{$node[\"MySQL1\"].json[\"sip_username\"]}}"
+      },
+      "name": "SSH",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        760,
+        240
+      ],
+      "credentials": {
+        "sshPassword": {
+          "id": "22",
+          "name": "b2br.rc.flexuc.io"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [],
+          "number": [
+            {
+              "value1": "={{$node[\"MySQL\"].json[\"count(*)\"]}}",
+              "operation": "largerEqual",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "name": "IF1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        400,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=select * from ucproxy_accounts where account_id = '{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}'"
+      },
+      "name": "MySQL1",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        610,
+        240
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=update ucproxy_accounts set deleted_timestamp = NOW() where device_id = '{{$node[\"MySQL1\"].json[\"device_id\"]}}'"
+      },
+      "name": "MySQL2",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        240
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=/usr/sbin/ucproxy-delete_device.sh {{$node[\"MySQL1\"].json[\"account_id\"]}} {{$node[\"MySQL1\"].json[\"device_id\"]}} {{$node[\"MySQL1\"].json[\"sip_username\"]}}"
+      },
+      "name": "SSH1",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        940,
+        240
+      ],
+      "credentials": {
+        "sshPassword": {
+          "id": "16",
+          "name": "b2br001.sjc2.avpnet.us"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=update flex_sip_devices set deletion_date = NOW(), status = 'deleted' where account_id = '{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}'"
+      },
+      "name": "MySQL3",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        440
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "IF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF1": {
+      "main": [
+        [
+          {
+            "node": "MySQL1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MySQL3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL1": {
+      "main": [
+        [
+          {
+            "node": "SSH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH": {
+      "main": [
+        [
+          {
+            "node": "SSH1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH1": {
+      "main": [
+        [
+          {
+            "node": "MySQL2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL2": {
+      "main": [
+        [
+          {
+            "node": "MySQL3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "id": 36
+}

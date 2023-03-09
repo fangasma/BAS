@@ -1,0 +1,266 @@
+{
+  "name": "Process Number Portouts",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        440,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=update num_portouts set batch_id = '{{$json[\"executionId\"]}}' where foc_date <= NOW() and completed = 0 and batch_id IS NULL"
+      },
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        840,
+        440
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const executionId = $executionId;\n\nreturn [{json:{executionId}}];"
+      },
+      "name": "WebflowID",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        640,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=select id,batch_id,number, concat(\"numbers/\",left(number,5)) as num_db from num_portouts where  batch_id = '{{$node[\"WebflowID\"].json[\"executionId\"]}}'"
+      },
+      "name": "MySQL1",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        440
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "url": "=http://45.40.112.109:15984/{{ encodeURIComponent($json[\"num_db\"]) }}/{{ encodeURIComponent($json[\"number\"]) }}",
+        "options": {}
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        440
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "62",
+          "name": "CouchDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "state",
+              "value": "port_out"
+            },
+            {
+              "name": "pvt_state",
+              "value": "port_out"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "basicAuth",
+        "requestMethod": "PUT",
+        "url": "=http://45.40.112.109:15984/{{ encodeURIComponent($node[\"MySQL1\"].json[\"num_db\"]) }}/{{ encodeURIComponent($node[\"MySQL1\"].json[\"number\"]) }}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ JSON.stringify($json)}}"
+      },
+      "name": "HTTP Request1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        440
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "62",
+          "name": "CouchDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=update num_portouts set completed = 1 where number = '{{$json[\"id\"]}}'"
+      },
+      "name": "MySQL2",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        1900,
+        440
+      ],
+      "retryOnFail": true,
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 23,
+              "minute": 59
+            }
+          ]
+        }
+      },
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        440,
+        280
+      ]
+    }
+  ],
+  "connections": {
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "MySQL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WebflowID": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "MySQL2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "WebflowID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "WebflowID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionTimeout": -1
+  },
+  "id": 187
+}

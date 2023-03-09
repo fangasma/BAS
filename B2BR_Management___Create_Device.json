@@ -1,0 +1,1774 @@
+{
+  "name": "B2BR Management - Create Device",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -140,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "48124f1f-4a05-458b-ade8-d50eaee5037f",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1560,
+        1480
+      ],
+      "webhookId": "48124f1f-4a05-458b-ade8-d50eaee5037f"
+    },
+    {
+      "parameters": {
+        "workflowId": "4"
+      },
+      "name": "Execute Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        -1190,
+        1590
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "X-Auth-Token",
+              "value": "={{$node[\"Execute Workflow\"].json[\"auth_token\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Account Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -1020,
+        1590
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "X-Auth-Token",
+              "value": "={{$node[\"Execute Workflow\"].json[\"auth_token\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Device Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        1790
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$node[\"Device Details\"].json[\"data\"][\"device_type\"]}}",
+              "value2": "softphone"
+            },
+            {
+              "value1": "={{$node[\"Device Details\"].json[\"data\"][\"device_type\"]}}",
+              "value2": "tbx"
+            },
+            {
+              "value1": "={{$node[\"Device Details\"].json[\"data\"][\"device_type\"]}}",
+              "value2": "comdesk"
+            },
+            {
+              "value1": "={{$node[\"Device Details\"].json[\"data\"][\"device_type\"]}}",
+              "value2": "commobile"
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        1780
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO ucproxy_accounts (account_id, device_id, realm, sip_username, sip_password, type, added_timestamp) VALUES ('{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}', '{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}', '{{$node[\"Account Details\"].json[\"data\"][\"realm\"]}}', '{{$node[\"Device Details\"].json[\"data\"][\"sip\"][\"username\"]}}','{{$node[\"Device Details\"].json[\"data\"][\"sip\"][\"password\"]}}', '{{$node[\"Device Details\"].json[\"data\"][\"device_type\"]}}',NOW())"
+      },
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        -820,
+        1720
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=/usr/sbin/ucproxy-build_device.sh {{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}} {{$node[\"Webhook\"].json[\"body\"][\"id\"]}} {{$node[\"Account Details\"].json[\"data\"][\"realm\"]}} {{$node[\"Device Details\"].json[\"data\"][\"sip\"][\"username\"]}} {{$node[\"Device Details\"].json[\"data\"][\"sip\"][\"password\"]}}"
+      },
+      "name": "SSH",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        1720
+      ],
+      "credentials": {
+        "sshPassword": {
+          "id": "22",
+          "name": "b2br.rc.flexuc.io"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$node[\"Device Details\"].json[\"data\"][\"device_type\"]}}",
+              "value2": "sip_device"
+            }
+          ]
+        }
+      },
+      "name": "IF1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        2020
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "NoOp",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        2200
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$node[\"Device Details\"].json[\"data\"][\"provision\"][\"endpoint_brand\"]}}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "yealink"
+            },
+            {
+              "value2": "polycom",
+              "output": 1
+            },
+            {
+              "value2": "poly",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 0
+      },
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\"data\": {\"media\": {\"audio\": {\"codecs\": [\"OPUS\",\"G729\",\"PCMU\",\"PCMA\"]}}}}"
+      },
+      "name": "Update Yealink Codecs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        1840
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\"data\": {\"media\": {\"audio\": {\"codecs\": [\"G729\",\"PCMU\",\"PCMA\"]}}}}"
+      },
+      "name": "Update Polycom Codecs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        2000
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO flex_sip_devices (account_id,device_id,brand,mac_address,model) VALUES ('{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}','{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}','{{$node[\"Device Details\"].json[\"data\"][\"provision\"][\"endpoint_brand\"]}}','{{$node[\"Device Details\"].json[\"data\"][\"mac_address\"]}}','{{$node[\"Device Details\"].json[\"data\"][\"provision\"][\"endpoint_model\"]}}')"
+      },
+      "name": "MySQL1",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        100,
+        1960
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$node[\"Webhook\"].json[\"body\"][\"type\"]}}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "account"
+            },
+            {
+              "value2": "device",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "name": "Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        520,
+        1620
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Accounts",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        740,
+        1340
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Account Creation",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        1120
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Device",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        740,
+        1500
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Device Creation",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2040,
+        1220
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PUT",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/callflows",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n\t\"data\": {\n\t\t\"numbers\": [\n\t\t\t\"8181\"\n\t\t],\n      \"featurecode\": {\n         \"name\": \"Device Provisioning\",\n         \"number\": \"8181\"\n      },\t\t  \n\t\t\"type\": \"pivotApp\",\n\t\t\"flow\": {\n\t\t\t\"children\": {},\n\t\t\t\"data\": {\n\t\t\t\t\"method\": \"GET\",\n\t\t\t\t\"req_timeout\": 5,\n\t\t\t\t\"req_format\": \"kazoo\",\n\t\t\t\t\"voice_url\": \"http://rest.flexuc.io/provisioning/ivr.php\",\n\t\t\t\t\"debug\": true,\n\t\t\t\t\"req_body_format\": \"form\"\n\t\t\t},\n\t\t\t\"module\": \"pivot\"\n\t\t},\n\t\t\"patterns\": [],\n\t\t\"metadata\": {}\n\t}\n}"
+      },
+      "name": "Add Device Prov Shortcode",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        1060
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {}
+      },
+      "name": "Get Device Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        960,
+        1420
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "Device Edit",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2040,
+        1380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$node[\"Get Device Details\"].json[\"data\"][\"owner_id\"]}}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "name": "IF NOT Assigned to User",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2260,
+        1480
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$node[\"Webhook\"].json[\"body\"][\"action\"]}}"
+      },
+      "name": "Account Action Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        960,
+        1220
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$node[\"Webhook\"].json[\"body\"][\"action\"]}}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "doc_created"
+            },
+            {
+              "value2": "doc_edited",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "name": "Device Action Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        1320
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Yealink Family",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        1320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{   \"data\": {      \"name\":\"No User\",      \"provision\":{         \"combo_keys\":{            \"3\":{               \"type\":\"speed_dial\",               \"value\":{                  \"value\":\"8181\",                  \"label\":\"Device Activation\"               }            }         }      }   }}"
+      },
+      "name": "Set Prov Combo Key",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2940,
+        1220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n\t\"data\": {\n\t\t\"provision\": {\n\t\t\t\"combo_keys\": {\n\t\t\t\t\"3\": {\n\t\t\t\t\t\"type\": \"speed_dial\",\n\t\t\t\t\t\"value\": {\n\t\t\t\t\t\t\"value\": \"6683\",\n\t\t\t\t\t\t\"label\": \"Move Call\"\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t\t\"4\": {\n\t\t\t\t\t\"type\": \"speed_dial\",\n\t\t\t\t\t\"value\": {\n\t\t\t\t\t\t\"value\": \"+18334644111\",\n\t\t\t\t\t\t\"label\": \"OneUC Support\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}"
+      },
+      "name": "Update Prov Key",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3320,
+        1340
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "=http://app001.jfk1.cr.oneuc.com:8000/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}/sync",
+        "jsonParameters": true,
+        "options": {}
+      },
+      "name": "Restart Device / Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        4560,
+        1100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": "={\n   \"data\": {\n      \"provision\":{\n         \"combo_keys\":{\n            \"{{$json[\"key_position\"]}}\":{\n               \"type\":\"{{$json[\"key_type\"]}}\",\n               \"value\":{\n                  \"value\":\"{{$json[\"key_value\"]}}\",\n                  \"label\":\"{{$json[\"key_label\"]}}\"\n               }\n            }\n         }\n      }\n   }\n}"
+      },
+      "name": "Set Key From Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3720,
+        1640
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        3080,
+        1500
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        4040,
+        1640
+      ],
+      "webhookId": "79b4083d-6738-4b5d-8efc-262f1d07dfa1"
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": "={\n\t\"data\": {\n\t\t\"device_management\": \"true\"\n\t}\n}"
+      },
+      "name": "Device Management Flag Set",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3700,
+        1340
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {
+          "bodyContentType": "json"
+        },
+        "bodyParametersJson": "={\n\t\"data\": {\n\t\t\"device_management\": \"false\"\n\t}\n}"
+      },
+      "name": "Device Management Flag Set1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2540,
+        1340
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "name": "Wait1",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        4780,
+        1100
+      ],
+      "webhookId": "b174091a-7643-4c95-8258-c52438e08f6b",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}/sync",
+        "jsonParameters": true,
+        "options": {}
+      },
+      "name": "Restart Device / Sync1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        4980,
+        1100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$json[\"data\"][\"provision\"][\"endpoint_brand\"]}}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "yealink"
+            }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "name": "Switch1",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        1420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=select * from flex_sip_device_templates where account_id = '{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}'"
+      },
+      "name": "MySQL2",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        2720,
+        1500
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "20",
+          "name": "do-flexuc-sub_appsDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"data\"][\"device_management\"]}}",
+              "operation": "notEqual",
+              "value2": "true"
+            },
+            {
+              "value1": "={{$json[\"data\"][\"device_management\"]}}",
+              "operation": "isEmpty"
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "name": "IF3",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        1580
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "NoOp2",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        1560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"key_position\"]}}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "name": "IF4",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3480,
+        1580
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "name": "Wait2",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        3160,
+        1220
+      ],
+      "webhookId": "6658a1ca-59e6-47f2-a507-899680c2595b"
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\n\t\"data\": {\n\t\t\"name\": \"No User\",\n\t\t\"provision\": {\n\t\t\t\"combo_keys\": {\n\t\t\t\t\"3\": {\n\t\t\t\t\t\"type\": \"speed_dial\",\n\t\t\t\t\t\"value\": {\n\t\t\t\t\t\t\"value\": \"8181\",\n\t\t\t\t\t\t\"label\": \"Device Activation\"\n\t\t\t\t\t},\n\t\t\t\t\t\"4\": {\n\t\t\t\t\t\t\"type\": \"speed_dial\",\n\t\t\t\t\t\t\"value\": {\n\t\t\t\t\t\t\t\"value\": \"+18334644111\",\n\t\t\t\t\t\t\t\"label\": \"Tech Support\"\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}"
+      },
+      "name": "Set Prov Combo Key1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        3560,
+        1120
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {}
+      },
+      "name": "Get Device Details - Updated",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        4120,
+        980
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "POST",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\"data\":{{JSON.stringify($json[\"data\"])}}}"
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        4340,
+        980
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$node[\"Device Details\"].json[\"data\"][\"device_type\"]}}",
+        "rules": {
+          "rules": [
+            {
+              "operation": "contains",
+              "value2": "comdesk"
+            },
+            {
+              "value2": "commobile",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "name": "Switch2",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -380,
+        1580
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "X-Auth-Token",
+              "value": "={{$node[\"Execute Workflow\"].json[\"auth_token\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Device Details1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        120,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"data\"][\"owner_id\"]}}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "name": "IF2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        340,
+        1120
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "NoOp1",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        560,
+        1060
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/users/{{$json[\"data\"][\"owner_id\"]}}",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "X-Auth-Token",
+              "value": "={{$node[\"Execute Workflow\"].json[\"auth_token\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Device Details2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        560,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "X-Auth-Token",
+              "value": "={{$node[\"Execute Workflow\"].json[\"auth_token\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Device Details3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        120,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"data\"][\"owner_id\"]}}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "name": "IF5",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        320,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/users/{{$json[\"data\"][\"owner_id\"]}}",
+        "options": {},
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "X-Auth-Token",
+              "value": "={{$node[\"Execute Workflow\"].json[\"auth_token\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Device Details4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        560,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@nomail.oneuc.com",
+        "toEmail": "={{$json[\"data\"][\"email\"]}}",
+        "subject": "OneUC LinkUp Desktop is Ready!",
+        "html": "=<!doctype html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<!-- utf-8 works for most cases -->\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<!-- Forcing initial-scale shouldn't be necessary -->\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<!-- Use the latest (edge) version of IE rendering engine -->\n<title>EmailTemplate-Fluid</title>\n<!-- The title tag shows in email notifications, like Android 4.4. -->\n\n<!-- Please use an inliner tool to convert all CSS to inline as inpage or external CSS is removed by email clients -->\n<!-- important in CSS is used to prevent the styles of currently inline CSS from overriding the ones mentioned in media queries when corresponding screen sizes are encountered -->\n\n<!-- CSS Reset -->\n<style type=\"text/css\">\n/* What it does: Remove spaces around the email design added by some email clients. */\n      /* Beware: It can remove the padding / margin and add a background color to the compose a reply window. */\nhtml, body {\n\tmargin: 0 !important;\n\tpadding: 0 !important;\n\theight: 100% !important;\n\twidth: 100% !important;\n}\n/* What it does: Stops email clients resizing small text. */\n* {\n\t-ms-text-size-adjust: 100%;\n\t-webkit-text-size-adjust: 100%;\n}\n/* What it does: Forces Outlook.com to display emails full width. */\n.ExternalClass {\n\twidth: 100%;\n}\n/* What is does: Centers email on Android 4.4 */\ndiv[style*=\"margin: 16px 0\"] {\n\tmargin: 0 !important;\n}\n/* What it does: Stops Outlook from adding extra spacing to tables. */\ntable, td {\n\tmso-table-lspace: 0pt !important;\n\tmso-table-rspace: 0pt !important;\n}\n/* What it does: Fixes webkit padding issue. Fix for Yahoo mail table alignment bug. Applies table-layout to the first 2 tables then removes for anything nested deeper. */\ntable {\n\tborder-spacing: 0 !important;\n\tborder-collapse: collapse !important;\n\ttable-layout: fixed !important;\n\tmargin: 0 auto !important;\n}\ntable table table {\n\ttable-layout: auto;\n}\n/* What it does: Uses a better rendering method when resizing images in IE. */\nimg {\n\t-ms-interpolation-mode: bicubic;\n}\n/* What it does: Overrides styles added when Yahoo's auto-senses a link. */\n.yshortcuts a {\n\tborder-bottom: none !important;\n}\n/* What it does: Another work-around for iOS meddling in triggered links. */\na[x-apple-data-detectors] {\n\tcolor: inherit !important;\n}\n</style>\n\n<!-- Progressive Enhancements -->\n<style type=\"text/css\">\n/* What it does: Hover styles for buttons */\n.button-td, .button-a {\n\ttransition: all 100ms ease-in;\n}\n.button-td:hover, .button-a:hover {\n\tbackground: #555555 !important;\n\tborder-color: #555555 !important;\n}\n</style>\n</head>\n<body width=\"100%\" height=\"100%\" bgcolor=\"#e0e0e0\" style=\"margin: 0;\" yahoo=\"yahoo\">\n<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" height=\"100%\" width=\"100%\" bgcolor=\"#e0e0e0\" style=\"border-collapse:collapse;\">\n  <tr>\n    <td><center style=\"width: 100%;\">\n        \n        <!-- Visually Hidden Preheader Text : BEGIN -->\n        <div style=\"display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family: sans-serif;\"> Your new OneUC LinkUp Softphone is Ready! </div>\n        <!-- Visually Hidden Preheader Text : END -->\n        \n        <div style=\"max-width: 600px;\"> \n          <!--[if (gte mso 9)|(IE)]>\n            <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" width=\"600\" align=\"center\">\n            <tr>\n            <td>\n            <![endif]--> \n          \n          <!-- Email Header : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"max-width: 600px;\">\n            <tr>\n              <td style=\"padding: 20px 0; text-align: center\"><img src=\"https://www.oneuc.com/images/logo.png\"  alt=\"alt_text\" border=\"0\"></td>\n            </tr>\n          </table>\n          <!-- Email Header : END --> \n          \n          <!-- Email Body : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" bgcolor=\"#ffffff\" width=\"100%\" style=\"max-width: 600px;\">\n            \n            <!-- Hero Image, Flush : BEGIN -->\n            <tr>\n              <td class=\"full-width-image\" align=\"center\" >&nbsp;</td>\n            </tr>\n            <!-- Hero Image, Flush : END --> \n            \n            <!-- 1 Column Text : BEGIN -->\n            <tr>\n              <td><table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" width=\"100%\">\n                  <tr>\n                    <td style=\"padding: 40px; font-family: sans-serif; font-size: 15px; mso-height-rule: exactly; line-height: 20px; color: #555555;\"> <p> Congrats!</p>\n                      <p>The very coolest communications thingie has been setup for your use. Of course we are talking about OneUC LinkUp, the super amazing application which turns your Windows PC or Apple Mac into a simple yet sophisticated phone system. In just moments you will be able to take advantage of some great features and options while experiencing high quality HD-Level calling.</p>\n                      <p>There are just a few simple steps you will need to complete in order to get setup.</p>\n                      <h3>Step 1:</h3>\n<p>You will need to download the OneUC LinkUp app and <strong>install</strong> it on your computer. Below are links to the Windows/PC and Apple Mac version of the app. Simply download it and <strong>install it like you would any other application.</strong></p>\n                      <table width=\"100%\" border=\"0\">\n                        <tbody>\n                          <tr>\n                            <td><center><a href=\"http://help.flexuc.io/linkup/oneuc_linkup.exe\"><img src=\"http://help.flexuc.io/wp-content/uploads/2022/12/windows_common.png\"/></a></center></td>\n                            <td><center><a href=\"http://help.flexuc.io/linkup/oneuc_linkup.dmg\"><img src=\"http://help.flexuc.io/wp-content/uploads/2022/12/osx_common.png\"/></a></center></td>\n                          </tr>\n\t\t\t\t\t\t\t<tr>\n\t\t\t\t\t\t\t <td>\n\t\t\t\t\t\t\t\t <center>\n\t\t\t\t\t\t\t\t\t<a href=\"http://help.flexuc.io/linkup/oneuc_linkup.exe\">\n\t\t\t\t\t\t\t\t \t\t<p>Download OneUC LinkUp</p> \n\t\t\t\t\t\t\t \t\t<p>for Windows</p>\n\t\t\t\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\t\t </center>\n\t\t\t\t\t\t\t</td>\n\t\t\t\t\t\t\t <td>\n\t\t\t\t\t\t\t\t <center>\n\t\t\t\t\t\t\t\t\t <a href=\"http://help.flexuc.io/linkup/oneuc_linkup.dmg\">\n\t\t\t\t\t\t\t\t\t \t<p>Download OneUC LinkUp</p>\n\t\t\t\t\t\t\t\t \t <p>for Apple Mac</p>\n\t\t\t\t\t\t\t\t     </a>\n\t\t\t\t\t\t\t\t </center>\n\t\t\t\t\t\t\t</td>\n                        </tbody>\n                      </table>\n                      <p>&nbsp;</p>\n                      <h3>Step 2:</h3>\n<p>After downloading the OneUC LinkUp App, click on the \"Set Me Up\" Button below, and like Magic everything will automatically be setup for you.&nbsp;</p>\n                      <p>The OneUC LinkUp App will automatically start, download it's updates and configure itself. There is nothing else you need to do.&nbsp;&nbsp;</p>\n                      <p>Please note that you can only press the setup button once. If you try to press it more than one time you will get a message that your instance is already being used by another computer, womp womp.</p>\n                      <p>If you run into any issues, feel free to call toll free at +1.833.464.4111 or email <a href=\"mailto:support@oneuc.com\">support@oneuc.com</a>, and one of our helpful support experts will be more than happy to assist you.</p>\n                      <center>\n                        <h2>Don't forget to <strong>INSTALL</strong> the Software first, then press the \"Set Me Up\" Button</h2>\n\t\t\t\t\t\t  <img src=\"http://help.flexuc.io/wp-content/uploads/2022/12/down_arrow_common.png\"/>\n                      </center>\n                        <!-- Button : Begin -->\n<table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" style=\"margin: auto;\">\n                        <tr>\n                          <td style=\"border-radius: 3px; background: #ed247f; text-align: center;\" class=\"button-td\"><a href=\"csc:{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}:{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}@ONEUCAPPOPEN\" style=\"background: #ed247f; border: 15px solid #ed247f; padding: 0 10px;color: #ffffff; font-family: sans-serif; font-size: 13px; line-height: 1.1; text-align: center; text-decoration: none; display: block; border-radius: 3px; font-weight: bold;\" class=\"button-a\"> \n                            <!--[if mso]>&nbsp;&nbsp;&nbsp;&nbsp;<![endif]-->Set me Up!<!--[if mso]>&nbsp;&nbsp;&nbsp;&nbsp;<![endif]--> \n                            </a></td>\n                        </tr>\n                      </table>\n                      \n                      <!-- Button : END -->\n                      </td>\n                  </tr>\n                </table></td>\n            </tr>\n            <!-- 1 Column Text : BEGIN --> \n            \n            <!-- Two Even Columns : BEGIN -->\n            <tr> </tr>\n            <!-- Two Even Columns : END -->\n            \n          </table>\n          <!-- Email Body : END --> \n          \n          <!-- Email Footer : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"max-width: 680px;\">\n            <tr>\n              <td style=\"padding: 40px 10px;width: 100%;font-size: 12px; font-family: sans-serif; mso-height-rule: exactly; line-height:18px; text-align: center; color: #888888;\"><webversion style=\"color:#cccccc; text-decoration:underline; font-weight: bold;\">&nbsp;</webversion>\n                <br>\n                <br>\n                <br>\n                <span class=\"mobile-link--footer\">&nbsp;</span> <br>\n                <br>\n                <unsubscribe style=\"color:#888888; text-decoration:underline;\">&nbsp;</unsubscribe></td>\n            </tr>\n          </table>\n          <!-- Email Footer : END --> \n          \n          <!--[if (gte mso 9)|(IE)]>\n            </td>\n            </tr>\n            </table>\n            <![endif]--> \n        </div>\n      </center></td>\n  </tr>\n</table>\n</body>\n</html>",
+        "options": {}
+      },
+      "name": "Send Email1",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        780,
+        820
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "24",
+          "name": "SMTP2GO"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "NoOp3",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        560,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\"data\": {\"media\": {\"audio\": {\"codecs\": [\"G729\",\"OPUS\"]}}}}"
+      },
+      "name": "Update Yealink Codecs1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        1360
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\"data\": {\"media\": {\"audio\": {\"codecs\": [\"OPUS\",\"G729\"]}}}}"
+      },
+      "name": "Update Yealink Codecs2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        940
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "=https://api.oneuc.com/v2/accounts/{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}/devices/{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "{\"data\": {\"media\": {\"audio\": {\"codecs\": [\"G729\",\"OPUS\"]}}}}"
+      },
+      "name": "Set Generic Softphone Codecs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        1600
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "28",
+          "name": "Flex UC - API Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "no-reply@nomail.oneuc.com",
+        "toEmail": "={{$json[\"data\"][\"email\"]}}",
+        "subject": "OneUC LinkUp Mobile is Ready!",
+        "text": "<!doctype html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<!-- utf-8 works for most cases -->\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<!-- Forcing initial-scale shouldn't be necessary -->\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<!-- Use the latest (edge) version of IE rendering engine -->\n<title>EmailTemplate-Fluid</title>\n<!-- The title tag shows in email notifications, like Android 4.4. -->\n\n<!-- Please use an inliner tool to convert all CSS to inline as inpage or external CSS is removed by email clients -->\n<!-- important in CSS is used to prevent the styles of currently inline CSS from overriding the ones mentioned in media queries when corresponding screen sizes are encountered -->\n\n<!-- CSS Reset -->\n<style type=\"text/css\">\n/* What it does: Remove spaces around the email design added by some email clients. */\n      /* Beware: It can remove the padding / margin and add a background color to the compose a reply window. */\nhtml, body {\n\tmargin: 0 !important;\n\tpadding: 0 !important;\n\theight: 100% !important;\n\twidth: 100% !important;\n}\n/* What it does: Stops email clients resizing small text. */\n* {\n\t-ms-text-size-adjust: 100%;\n\t-webkit-text-size-adjust: 100%;\n}\n/* What it does: Forces Outlook.com to display emails full width. */\n.ExternalClass {\n\twidth: 100%;\n}\n/* What is does: Centers email on Android 4.4 */\ndiv[style*=\"margin: 16px 0\"] {\n\tmargin: 0 !important;\n}\n/* What it does: Stops Outlook from adding extra spacing to tables. */\ntable, td {\n\tmso-table-lspace: 0pt !important;\n\tmso-table-rspace: 0pt !important;\n}\n/* What it does: Fixes webkit padding issue. Fix for Yahoo mail table alignment bug. Applies table-layout to the first 2 tables then removes for anything nested deeper. */\ntable {\n\tborder-spacing: 0 !important;\n\tborder-collapse: collapse !important;\n\ttable-layout: fixed !important;\n\tmargin: 0 auto !important;\n}\ntable table table {\n\ttable-layout: auto;\n}\n/* What it does: Uses a better rendering method when resizing images in IE. */\nimg {\n\t-ms-interpolation-mode: bicubic;\n}\n/* What it does: Overrides styles added when Yahoo's auto-senses a link. */\n.yshortcuts a {\n\tborder-bottom: none !important;\n}\n/* What it does: Another work-around for iOS meddling in triggered links. */\na[x-apple-data-detectors] {\n\tcolor: inherit !important;\n}\n</style>\n\n<!-- Progressive Enhancements -->\n<style type=\"text/css\">\n/* What it does: Hover styles for buttons */\n.button-td, .button-a {\n\ttransition: all 100ms ease-in;\n}\n.button-td:hover, .button-a:hover {\n\tbackground: #555555 !important;\n\tborder-color: #555555 !important;\n}\n</style>\n</head>\n<body width=\"100%\" height=\"100%\" bgcolor=\"#e0e0e0\" style=\"margin: 0;\" yahoo=\"yahoo\">\n<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" height=\"100%\" width=\"100%\" bgcolor=\"#e0e0e0\" style=\"border-collapse:collapse;\">\n  <tr>\n    <td><center style=\"width: 100%;\">\n        \n        <!-- Visually Hidden Preheader Text : BEGIN -->\n        <div style=\"display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family: sans-serif;\"> Your new OneUC LinkUp Softphone is Ready! </div>\n        <!-- Visually Hidden Preheader Text : END -->\n        \n        <div style=\"max-width: 600px;\"> \n          <!--[if (gte mso 9)|(IE)]>\n            <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" width=\"600\" align=\"center\">\n            <tr>\n            <td>\n            <![endif]--> \n          \n          <!-- Email Header : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"max-width: 600px;\">\n            <tr>\n              <td style=\"padding: 20px 0; text-align: center\"><img src=\"https://www.oneuc.com/images/logo.png\"  alt=\"alt_text\" border=\"0\"></td>\n            </tr>\n          </table>\n          <!-- Email Header : END --> \n          \n          <!-- Email Body : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" bgcolor=\"#ffffff\" width=\"100%\" style=\"max-width: 600px;\">\n            \n            <!-- Hero Image, Flush : BEGIN -->\n            <tr>\n              <td class=\"full-width-image\" align=\"center\" >&nbsp;</td>\n            </tr>\n            <!-- Hero Image, Flush : END --> \n            \n            <!-- 1 Column Text : BEGIN -->\n            <tr>\n              <td><table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" width=\"100%\">\n                  <tr>\n                    <td style=\"padding: 40px; font-family: sans-serif; font-size: 15px; mso-height-rule: exactly; line-height: 20px; color: #555555;\"> <p> Congrats!</p>\n                      <p>Someone really likes you because they have enabled an instance of the best mobile softphone on the market. Yep, that's right, OneUC LinkUp Mobile Edition has been provisioned for your use. In just moments we are going to turn your Apple or Andriod based Mobile Device into a simple yet sophisticated phone system. In just moments you will be able to take advantage of some great features and options while experiencing high quality HD-Level calling.</p>\n                      <p>There are just a few simple steps you will need to complete in order to get setup.</p>\n                      <h3>Step 1:</h3>\n<p>You will need to download the OneUC LinkUp Mobile app and install it on your phone. You can do this by going to the Apple App Store, or Google Play Store and searching for OneUC Linkup.</p>\n<p>Or if you would like, you can click on the link below from your mobile phone.</p>\n                      <table width=\"100%\" border=\"0\">\n                        <tbody>\n                          <tr>\n                            <td><center><a href=\"https://apps.apple.com/us/app/oneuc-linkup/id1662097012\"><img src=\"http://help.flexuc.io/wp-content/uploads/2023/03/download_apple.png\" width=\"189\" height=\"55\"/></a></center></td>\n                            <td><center><a href=\"https://play.google.com/store/apps/details?id=com.oneuc.linkup.android\"><img src=\"http://help.flexuc.io/wp-content/uploads/2023/03/google_download.png\" width=\"189\"/></a></center></td>\n                          </tr>\n\t\t\t\t\t\t\t<tr>\n\t\t\t\t\t\t\t <td><center>\n\t\t\t\t\t\t\t </center>\n\t\t\t\t\t\t\t</td>\n\t\t\t\t\t\t\t <td>\n\t\t\t\t\t\t\t\t <center>\n\t\t\t\t\t\t\t\t </center>\n\t\t\t\t\t\t\t</td>\n                        </tbody>\n                      </table>\n                      <p>&nbsp;</p>\n                      <h3>Step 2:</h3>\n<p>After downloading the OneUC LinkUp App to your mobile phone, you will need to launch the app, and then scan the QR code below. This will automatically kick off the provisioning. If you are unable to scan the QR code Please enter the following details into the app at the login screen:, click on the \"Set Me Up\" Button below, and like Magic everything will automatically be setup for you.&nbsp;</p>\n                      <p>The OneUC LinkUp App will automatically start, download it's updates and configure itself. There is nothing else you need to do.&nbsp;&nbsp;</p>\n                      <p><strong>Username:</strong> {{$node[&quot;Webhook&quot;].json[&quot;body&quot;][&quot;id&quot;]}}<br>\n                        <strong>Password: </strong>{{$node[&quot;Webhook&quot;].json[&quot;body&quot;][&quot;account_id&quot;]}}<br>\n                      </p>\n                      <p>&nbsp;</p>\n                      <p>If you run into any issues, feel free to call toll free at +1.833.464.4111 or email <a href=\"mailto:support@oneuc.com\">support@oneuc.com</a>, and one of our helpful support experts will be more than happy to assist you.</p>\n                      <center>\n                        <h2>Don't forget Scan the QR Code Below!</h2>\n\t\t\t\t\t\t  <img src=\"http://help.flexuc.io/wp-content/uploads/2022/12/down_arrow_common.png\"/>\n                      </center>\n                        <p>\n                          <!-- Button : Begin -->\n\t\t\t\t\t\t\t<center>\n\t\t\t\t\t\t\t<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=csc:{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}:{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}@ONEUCAPPOPEN\"/>\n\t\t\t\t\t\t\t</center>\t\n\t\t\t\t\t\t</p>\n                        <p>&nbsp;</p>                        <!-- Button : END -->\n                    </td>\n                  </tr>\n                </table></td>\n            </tr>\n            <!-- 1 Column Text : BEGIN --> \n            \n            <!-- Two Even Columns : BEGIN -->\n            <tr> </tr>\n            <!-- Two Even Columns : END -->\n            \n          </table>\n          <!-- Email Body : END --> \n          \n          <!-- Email Footer : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"max-width: 680px;\">\n            <tr>\n              <td style=\"padding: 40px 10px;width: 100%;font-size: 12px; font-family: sans-serif; mso-height-rule: exactly; line-height:18px; text-align: center; color: #888888;\"><webversion style=\"color:#cccccc; text-decoration:underline; font-weight: bold;\">&nbsp;</webversion>\n                <br>\n                <br>\n                <br>\n                <span class=\"mobile-link--footer\">&nbsp;</span> <br>\n                <br>\n                <unsubscribe style=\"color:#888888; text-decoration:underline;\">&nbsp;</unsubscribe></td>\n            </tr>\n          </table>\n          <!-- Email Footer : END --> \n          \n          <!--[if (gte mso 9)|(IE)]>\n            </td>\n            </tr>\n            </table>\n            <![endif]--> \n        </div>\n      </center></td>\n  </tr>\n</table>\n</body>\n</html>",
+        "html": "=<!doctype html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<!-- utf-8 works for most cases -->\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<!-- Forcing initial-scale shouldn't be necessary -->\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<!-- Use the latest (edge) version of IE rendering engine -->\n<title>EmailTemplate-Fluid</title>\n<!-- The title tag shows in email notifications, like Android 4.4. -->\n\n<!-- Please use an inliner tool to convert all CSS to inline as inpage or external CSS is removed by email clients -->\n<!-- important in CSS is used to prevent the styles of currently inline CSS from overriding the ones mentioned in media queries when corresponding screen sizes are encountered -->\n\n<!-- CSS Reset -->\n<style type=\"text/css\">\n/* What it does: Remove spaces around the email design added by some email clients. */\n      /* Beware: It can remove the padding / margin and add a background color to the compose a reply window. */\nhtml, body {\n\tmargin: 0 !important;\n\tpadding: 0 !important;\n\theight: 100% !important;\n\twidth: 100% !important;\n}\n/* What it does: Stops email clients resizing small text. */\n* {\n\t-ms-text-size-adjust: 100%;\n\t-webkit-text-size-adjust: 100%;\n}\n/* What it does: Forces Outlook.com to display emails full width. */\n.ExternalClass {\n\twidth: 100%;\n}\n/* What is does: Centers email on Android 4.4 */\ndiv[style*=\"margin: 16px 0\"] {\n\tmargin: 0 !important;\n}\n/* What it does: Stops Outlook from adding extra spacing to tables. */\ntable, td {\n\tmso-table-lspace: 0pt !important;\n\tmso-table-rspace: 0pt !important;\n}\n/* What it does: Fixes webkit padding issue. Fix for Yahoo mail table alignment bug. Applies table-layout to the first 2 tables then removes for anything nested deeper. */\ntable {\n\tborder-spacing: 0 !important;\n\tborder-collapse: collapse !important;\n\ttable-layout: fixed !important;\n\tmargin: 0 auto !important;\n}\ntable table table {\n\ttable-layout: auto;\n}\n/* What it does: Uses a better rendering method when resizing images in IE. */\nimg {\n\t-ms-interpolation-mode: bicubic;\n}\n/* What it does: Overrides styles added when Yahoo's auto-senses a link. */\n.yshortcuts a {\n\tborder-bottom: none !important;\n}\n/* What it does: Another work-around for iOS meddling in triggered links. */\na[x-apple-data-detectors] {\n\tcolor: inherit !important;\n}\n</style>\n\n<!-- Progressive Enhancements -->\n<style type=\"text/css\">\n/* What it does: Hover styles for buttons */\n.button-td, .button-a {\n\ttransition: all 100ms ease-in;\n}\n.button-td:hover, .button-a:hover {\n\tbackground: #555555 !important;\n\tborder-color: #555555 !important;\n}\n</style>\n</head>\n<body width=\"100%\" height=\"100%\" bgcolor=\"#e0e0e0\" style=\"margin: 0;\" yahoo=\"yahoo\">\n<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" height=\"100%\" width=\"100%\" bgcolor=\"#e0e0e0\" style=\"border-collapse:collapse;\">\n  <tr>\n    <td><center style=\"width: 100%;\">\n        \n        <!-- Visually Hidden Preheader Text : BEGIN -->\n        <div style=\"display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;font-family: sans-serif;\"> Your new OneUC LinkUp Softphone is Ready! </div>\n        <!-- Visually Hidden Preheader Text : END -->\n        \n        <div style=\"max-width: 600px;\"> \n          <!--[if (gte mso 9)|(IE)]>\n            <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" width=\"600\" align=\"center\">\n            <tr>\n            <td>\n            <![endif]--> \n          \n          <!-- Email Header : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"max-width: 600px;\">\n            <tr>\n              <td style=\"padding: 20px 0; text-align: center\"><img src=\"https://www.oneuc.com/images/logo.png\"  alt=\"alt_text\" border=\"0\"></td>\n            </tr>\n          </table>\n          <!-- Email Header : END --> \n          \n          <!-- Email Body : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" bgcolor=\"#ffffff\" width=\"100%\" style=\"max-width: 600px;\">\n            \n            <!-- Hero Image, Flush : BEGIN -->\n            <tr>\n              <td class=\"full-width-image\" align=\"center\" >&nbsp;</td>\n            </tr>\n            <!-- Hero Image, Flush : END --> \n            \n            <!-- 1 Column Text : BEGIN -->\n            <tr>\n              <td><table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" width=\"100%\">\n                  <tr>\n                    <td style=\"padding: 40px; font-family: sans-serif; font-size: 15px; mso-height-rule: exactly; line-height: 20px; color: #555555;\"> <p> Congrats!</p>\n                      <p>Someone really likes you because they have enabled an instance of the best mobile softphone on the market. Yep, that's right, OneUC LinkUp Mobile Edition has been provisioned for your use. In just moments we are going to turn your Apple or Android based Mobile Device into a simple yet sophisticated phone system. In just moments you will be able to take advantage of some great features and options while experiencing high quality HD-Level calling.</p>\n                      <p>There are just a few simple steps you will need to complete in order to get setup.</p>\n                      <h3>Step 1:</h3>\n<p>You will need to download the OneUC LinkUp Mobile app and install it on your phone. You can do this by going to the Apple App Store, or Google Play Store and searching for OneUC Linkup.</p>\n<p>Or if you would like, you can click on the link below from your mobile phone.</p>\n                      <table width=\"100%\" border=\"0\">\n                        <tbody>\n                          <tr>\n                            <td><center><a href=\"https://apps.apple.com/us/app/oneuc-linkup/id1662097012\"><img src=\"http://help.flexuc.io/wp-content/uploads/2023/03/download_apple.png\" width=\"189\" height=\"55\"/></a></center></td>\n                            <td><center><a href=\"https://play.google.com/store/apps/details?id=com.oneuc.linkup.android\"><img src=\"http://help.flexuc.io/wp-content/uploads/2023/03/google_download.png\" width=\"189\"/></a></center></td>\n                          </tr>\n\t\t\t\t\t\t\t<tr>\n\t\t\t\t\t\t\t <td><center>\n\t\t\t\t\t\t\t </center>\n\t\t\t\t\t\t\t</td>\n\t\t\t\t\t\t\t <td>\n\t\t\t\t\t\t\t\t <center>\n\t\t\t\t\t\t\t\t </center>\n\t\t\t\t\t\t\t</td>\n                        </tbody>\n                      </table>\n                      <p>&nbsp;</p>\n                      <h3>Step 2:</h3>\n<p>After downloading the OneUC LinkUp App to your mobile phone, you will need to launch the app, and then scan the QR code below. This will automatically kick off the provisioning. If you are unable to scan the QR code Please enter the following details into the app at the login screen:</p>\n                      \n                      <p><strong>Username:</strong> {{$node[\"Webhook\"].json[\"body\"][\"id\"]}}<br>\n                        <strong>Password: </strong> {{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}<br>\n                      </p>\n                      <p>&nbsp;</p>\n                      <p>If you run into any issues, feel free to call toll free at +1.833.464.4111 or email <a href=\"mailto:support@oneuc.com\">support@oneuc.com</a>, and one of our helpful support experts will be more than happy to assist you.</p>\n                      <center>\n                        <h2>Don't forget Scan the QR Code Below!</h2>\n\t\t\t\t\t\t  <img src=\"http://help.flexuc.io/wp-content/uploads/2022/12/down_arrow_common.png\"/>\n                      </center>\n                        <p>\n                          <!-- Button : Begin -->\n\t\t\t\t\t\t\t<center>\n\t\t\t\t\t\t\t<img src=\"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=csc:{{$node[\"Webhook\"].json[\"body\"][\"id\"]}}:{{$node[\"Webhook\"].json[\"body\"][\"account_id\"]}}@ONEUCAPPOPEN\"/>\n\t\t\t\t\t\t\t</center>\t\n\t\t\t\t\t\t</p>\n                        <p>&nbsp;</p>                        <!-- Button : END -->\n                    </td>\n                  </tr>\n                </table></td>\n            </tr>\n            <!-- 1 Column Text : BEGIN --> \n            \n            <!-- Two Even Columns : BEGIN -->\n            <tr> </tr>\n            <!-- Two Even Columns : END -->\n            \n          </table>\n          <!-- Email Body : END --> \n          \n          <!-- Email Footer : BEGIN -->\n          <table cellspacing=\"0\" cellpadding=\"0\" border=\"0\" align=\"center\" width=\"100%\" style=\"max-width: 680px;\">\n            <tr>\n              <td style=\"padding: 40px 10px;width: 100%;font-size: 12px; font-family: sans-serif; mso-height-rule: exactly; line-height:18px; text-align: center; color: #888888;\"><webversion style=\"color:#cccccc; text-decoration:underline; font-weight: bold;\">&nbsp;</webversion>\n                <br>\n                <br>\n                <br>\n                <span class=\"mobile-link--footer\">&nbsp;</span> <br>\n                <br>\n                <unsubscribe style=\"color:#888888; text-decoration:underline;\">&nbsp;</unsubscribe></td>\n            </tr>\n          </table>\n          <!-- Email Footer : END --> \n          \n          <!--[if (gte mso 9)|(IE)]>\n            </td>\n            </tr>\n            </table>\n            <![endif]--> \n        </div>\n      </center></td>\n  </tr>\n</table>\n</body>\n</html>",
+        "options": {}
+      },
+      "name": "Send Mobile Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        780,
+        1120
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "24",
+          "name": "SMTP2GO"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow": {
+      "main": [
+        [
+          {
+            "node": "Account Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account Details": {
+      "main": [
+        [
+          {
+            "node": "Device Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Details": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "SSH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Update Yealink Codecs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Polycom Codecs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Yealink Codecs": {
+      "main": [
+        [
+          {
+            "node": "MySQL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Polycom Codecs": {
+      "main": [
+        [
+          {
+            "node": "MySQL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL1": {
+      "main": [
+        [
+          {
+            "node": "Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Type": {
+      "main": [
+        [
+          {
+            "node": "Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Device",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accounts": {
+      "main": [
+        [
+          {
+            "node": "Account Action Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account Creation": {
+      "main": [
+        [
+          {
+            "node": "Add Device Prov Shortcode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device": {
+      "main": [
+        [
+          {
+            "node": "Get Device Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Device Details": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Edit": {
+      "main": [
+        [
+          {
+            "node": "IF NOT Assigned to User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF NOT Assigned to User": {
+      "main": [
+        [
+          {
+            "node": "Device Management Flag Set1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Account Action Type": {
+      "main": [
+        [
+          {
+            "node": "Account Creation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Action Type": {
+      "main": [
+        [
+          {
+            "node": "Device Creation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Device Edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Yealink Family": {
+      "main": [
+        [
+          {
+            "node": "Device Action Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Creation": {
+      "main": [
+        [
+          {
+            "node": "Set Prov Combo Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Prov Key": {
+      "main": [
+        [
+          {
+            "node": "Device Management Flag Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prov Combo Key": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Key From Template": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "IF4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Management Flag Set": {
+      "main": [
+        [
+          {
+            "node": "Get Device Details - Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Management Flag Set1": {
+      "main": [
+        [
+          {
+            "node": "Set Prov Combo Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restart Device / Sync": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Restart Device / Sync1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Yealink Family",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [],
+        [
+          {
+            "node": "NoOp2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL2": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF3": {
+      "main": [
+        [
+          {
+            "node": "MySQL2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF4": {
+      "main": [
+        [
+          {
+            "node": "Device Management Flag Set",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Key From Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Set Prov Combo Key1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prov Combo Key1": {
+      "main": [
+        [
+          {
+            "node": "Get Device Details - Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Device Details - Updated": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Restart Device / Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Update Yealink Codecs2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Yealink Codecs1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "Set Generic Softphone Codecs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Details1": {
+      "main": [
+        [
+          {
+            "node": "IF2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF2": {
+      "main": [
+        [
+          {
+            "node": "NoOp1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Device Details2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Details2": {
+      "main": [
+        [
+          {
+            "node": "Send Mobile Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Details3": {
+      "main": [
+        [
+          {
+            "node": "IF5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Device Details4": {
+      "main": [
+        [
+          {
+            "node": "Send Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF5": {
+      "main": [
+        [
+          {
+            "node": "NoOp3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Device Details4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Yealink Codecs1": {
+      "main": [
+        [
+          {
+            "node": "Device Details1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Yealink Codecs2": {
+      "main": [
+        [
+          {
+            "node": "Device Details3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "id": 34
+}
